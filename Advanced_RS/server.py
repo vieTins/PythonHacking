@@ -12,7 +12,7 @@ class Server:
     def __init__(self, host, port):
         self.host = host
         self.port = port 
-        self.server_socket = socket.get_server_socket() 
+        self.server_socket = self.get_server_socket() 
         self.clients = {}
         # một dict để mapping giữa mỗi client với thư mục hiện tại của nó 
         self.clients_cwd = {} 
@@ -187,3 +187,47 @@ class Server:
         client_socket , client_address = s.accept()
         print(f"[+] {client_address} connected")
         Server._send_file(client_socket , filename) 
+    @classmethod # là phương thức của class chứ không phải instance 
+    # thay vì self thì nó nhận cls (class hiện tại) làm tham số
+    # có thể truy cậy và thay đổi biến của class , nhưng không thể thay đổi attr của instance 
+    def _receive_file (cls , s: socket.socket , buffer_size = 4096)  :
+        # nhận thông tin file sử dụng socket 
+        received = s.recv(buffer_size).decode()
+        filename , filesize = received.split(SEPERATOR)
+        # xóa đường dẫn tuyệt đối nếu có 
+        filename = os.path.basename(filename)
+        # chuyển thành int 
+        filesize = int(filesize)
+        # bắt đầu nhận file từ socket 
+        # và ghi vào luồng file 
+        progress = tqdm.tqdm(range(filesize), f"Receiving {filename}" , unit="B" , unit_scale=True , unit_divisor=1024 ) 
+        with open(filename , "wb") as f :
+            while True :
+                # đọc 1024 bytes từ socket 
+                bytes_read = s.recv(buffer_size)
+                if not bytes_read : 
+                    break 
+                f.write(bytes_read)
+                # cập nhật thanh tiến trình 
+                progress.update(len(bytes_read))
+        # đóng socket
+        s.close()
+    @classmethod
+    def _send_file(cls , s :socket.socket, filename , buffer_size = 4096) : 
+        filesize = os.path.getsize(filename)
+        s.send(f"{filename}{SEPERATOR}{filesize}".encode())
+        # bắt đầu gửi file 
+        progress = tqdm.tqdm(range(filesize) , f"Sending {filename}" , unit="B" , unit_scale=True , unit_divisor=1024)
+        with open(filename , "rb") as f :
+            while True : 
+                bytes_read = f.read(buffer_size) 
+                if not bytes_read : 
+                    break 
+                s.sendall(bytes_read)
+                progress.update(len(bytes_read))
+        s.close()
+
+if __name__ == "__main__" :
+    server = Server(SERVER_HOST , SERVER_PORT)
+    server.start()
+    
