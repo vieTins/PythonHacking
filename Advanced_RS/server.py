@@ -84,7 +84,7 @@ class Server:
                 print(tabulate.tabulate(connected_clients , headers=["Index" , "Address" , "Port" , "CWD"])) # headers là tên của các cột
             elif (match := re.search(r"use\s*(\w*)" , command)) : 
                 # sử dụng regex để tìm user 
-                # \s* để bỏ qua khoảng trắng - \w* là bất kỳ ký tự nào
+                # \s* để bỏ qua khoảng trắng - \w* là bất kỳ ký tự nào - 
                 # nếu người dùng muốn sử dụng một client cụ thể 
                 # lấy index của client 
                 try : 
